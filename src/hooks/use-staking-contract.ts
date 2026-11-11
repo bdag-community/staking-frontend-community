@@ -37,6 +37,7 @@ import {
 } from "@/lib/staking-contract";
 import { getFreshWalletWriteBlockReason } from "@/lib/staking-boundaries";
 import { useWalletNetworkValidation } from "@/hooks/use-wallet-network-validation";
+import { rememberStakingReturnRoute } from "@/lib/staking-return-route";
 
 export type StakingAction =
   | "stake"
@@ -196,11 +197,6 @@ const getBufferedFees = async () => {
   };
 };
 
-export const getEstimatedStakeNetworkFee = async () => {
-  const fees = await getBufferedFees();
-  return fees.maxFeePerGas * STAKE_GAS_FALLBACK_LIMIT;
-};
-
 type StakeBalanceCheck = {
   balance: bigint;
   stakeAmount: bigint;
@@ -264,6 +260,37 @@ const getStakeGasLimit = async (
   }
 };
 
+const getPendingStakeBalance = (account: `0x${string}`) =>
+  getBalance(wagmiAdapter.wagmiConfig, {
+    address: account,
+    chainId: blockdagTestnet.id,
+    blockTag: "pending",
+  });
+
+// Round down to the four decimal places accepted by the input, in wei.
+const STAKE_INPUT_UNIT_WEI = 10n ** 14n;
+const maxStakeInput = (balance: bigint, fee: bigint) =>
+  balance > fee ? ((balance - fee) / STAKE_INPUT_UNIT_WEI) * STAKE_INPUT_UNIT_WEI : 0n;
+
+export const getMaxStakeQuote = async (
+  account: `0x${string}`,
+  poolAddress: `0x${string}`,
+  minStake: bigint,
+) => {
+  const [fees, { value: balance }] = await Promise.all([
+    getBufferedFees(),
+    getPendingStakeBalance(account),
+  ]);
+  const fallbackFee = STAKE_GAS_FALLBACK_LIMIT * fees.maxFeePerGas;
+  // Probe at the minimum so the estimator has balance available for gas.
+  const estimatedGas = balance >= minStake + fallbackFee
+    ? await getStakeGasLimit(account, poolAddress, minStake, fees, resolveStakingContractAddress())
+    : STAKE_GAS_FALLBACK_LIMIT;
+  const gas = estimatedGas > STAKE_GAS_FALLBACK_LIMIT ? estimatedGas : STAKE_GAS_FALLBACK_LIMIT;
+  const networkFee = gas * fees.maxFeePerGas;
+  return { balance, networkFee, amount: maxStakeInput(balance, networkFee) };
+};
+
 const assertStakeBalance = async (
   account: `0x${string}`,
   poolAddress: `0x${string}`,
@@ -272,17 +299,14 @@ const assertStakeBalance = async (
   contractAddress: `0x${string}`,
 ) => {
   const [{ value: balance }, gasLimit] = await Promise.all([
-    getBalance(wagmiAdapter.wagmiConfig, {
-      address: account,
-      chainId: blockdagTestnet.id,
-    }),
+    getPendingStakeBalance(account),
     getStakeGasLimit(account, poolAddress, stakeAmount, fees, contractAddress),
   ]);
 
   const estimatedNetworkFee = gasLimit * fees.maxFeePerGas;
   const totalRequired = stakeAmount + estimatedNetworkFee;
 
-  if (balance >= totalRequired) return;
+  if (balance >= totalRequired) return gasLimit;
 
   throw new InsufficientStakeBalanceError({
     balance,
@@ -390,6 +414,16 @@ type ContractWriteParams = Parameters<typeof writeContract>[1];
 type ContractSimulationParams = Parameters<typeof simulateContractWithRetry>[1];
 type EstimateGasParams = Parameters<typeof estimateGas>[1];
 type SendTransactionParams = Parameters<typeof sendTransaction>[1];
+
+async function signWithdrawal(request: ContractWriteParams) {
+  const forgetReturnRoute = rememberStakingReturnRoute();
+  try {
+    return await writeContract(wagmiAdapter.wagmiConfig, request);
+  } catch (error) {
+    forgetReturnRoute();
+    throw error;
+  }
+}
 
 export const useStakingContract = ({
   checkNonceOnConnect = false,
@@ -904,7 +938,7 @@ export const useStakingContract = ({
       const fees = await getBufferedFees();
       const parsedAmount = parseEther(amount);
       amountRaw = parsedAmount.toString();
-      await assertStakeBalance(
+      const gas = await assertStakeBalance(
         account,
         poolAddress as `0x${string}`,
         parsedAmount,
@@ -927,6 +961,7 @@ export const useStakingContract = ({
           value: parsedAmount,
           account,
           chainId: blockdagTestnet.id,
+          gas,
           ...fees,
         } as ContractSimulationParams,
         "Stake preparation",
@@ -1028,10 +1063,7 @@ export const useStakingContract = ({
       });
 
       failureStage = "failed";
-      const txHash = await writeContract(
-        wagmiAdapter.wagmiConfig,
-        request as ContractWriteParams
-      );
+      const txHash = await signWithdrawal(request as ContractWriteParams);
       txSubmitted = true;
       const receipt = await handleTransaction(
         txHash,
@@ -1105,10 +1137,7 @@ export const useStakingContract = ({
       });
 
       failureStage = "failed";
-      const txHash = await writeContract(
-        wagmiAdapter.wagmiConfig,
-        request as ContractWriteParams
-      );
+      const txHash = await signWithdrawal(request as ContractWriteParams);
       txSubmitted = true;
       const receipt = await handleTransaction(
         txHash,
@@ -1210,10 +1239,7 @@ export const useStakingContract = ({
           });
 
           failureStage = "failed";
-          const txHash = await writeContract(
-            wagmiAdapter.wagmiConfig,
-            request as ContractWriteParams,
-          );
+          const txHash = await signWithdrawal(request as ContractWriteParams);
           currentTxSubmitted = true;
           await handleTransaction(
             txHash,
@@ -1315,10 +1341,7 @@ export const useStakingContract = ({
       });
 
       failureStage = "failed";
-      const txHash = await writeContract(
-        wagmiAdapter.wagmiConfig,
-        request as ContractWriteParams
-      );
+      const txHash = await signWithdrawal(request as ContractWriteParams);
       txSubmitted = true;
       const receipt = await handleTransaction(
         txHash,

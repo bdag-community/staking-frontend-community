@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useId, useMemo, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
 import { formatEther, parseEther } from "viem";
 import {
   AlertCircle,
@@ -21,7 +22,7 @@ import { Input } from "@/components/ui/input";
 import { InfoTooltip } from "./InfoTooltip";
 import {
   DEFAULT_STAKE_NETWORK_FEE_WEI,
-  getEstimatedStakeNetworkFee,
+  getMaxStakeQuote,
   useStakingContract,
 } from "@/hooks/use-staking-contract";
 import { useWallet } from "@/hooks/use-wallet";
@@ -68,16 +69,20 @@ export const StakeModal: React.FC<StakeModalProps> = ({
   } = useStakingContract();
   const { refetch: refetchTotalStaked } = useTotalStaked();
   const [amount, setAmount] = useState("");
-  const [stakeNetworkFeeRaw, setStakeNetworkFeeRaw] = useState(
-    DEFAULT_STAKE_NETWORK_FEE_WEI,
-  );
-  const { isConnected, balanceData } = useWallet();
+  const { address, chainId, isConnected, balanceData } = useWallet();
   const { lowestPoolApy, lowestPool } = useLowestPool();
   const { formatted: stakingPeriodLabels } = useStakingPeriods();
-  const { minStake, version } = useContractVersion();
-  const { chainId } = useWallet();
+  const { minStake, minStakeRaw, version } = useContractVersion();
   const networkValidation = useWalletNetworkValidation();
   const targetPool = pool || lowestPool?.poolAddress;
+  const maxQuote = useQuery({
+    queryKey: ["stake-max", chainId, address, targetPool, minStakeRaw.toString()],
+    enabled: isOpen && isConnected && Boolean(address && targetPool) &&
+      chainId === blockdagTestnet.id && version.startsWith("2."),
+    queryFn: () => getMaxStakeQuote(address as `0x${string}`, targetPool as `0x${string}`, minStakeRaw),
+    refetchOnWindowFocus: false,
+    retry: false,
+  });
 
   // const weeklyReward = calculateEstimatedWeeklyReward(numAmount);
   // const afterCommission = pool ? weeklyReward * (1 - pool.commission / 100) : 0;
@@ -90,18 +95,15 @@ export const StakeModal: React.FC<StakeModalProps> = ({
       return 0n;
     }
   }, [amount]);
-  const walletBalanceRaw = balanceData?.value ?? 0n;
-  const maxStakeRaw =
-    walletBalanceRaw > stakeNetworkFeeRaw
-      ? walletBalanceRaw - stakeNetworkFeeRaw
-      : 0n;
-  const maxStakeAmount = parseFloat(formatEther(maxStakeRaw));
+  const walletBalanceRaw = maxQuote.data?.balance ?? balanceData?.value ?? 0n;
+  const stakeNetworkFeeRaw = maxQuote.data?.networkFee ?? DEFAULT_STAKE_NETWORK_FEE_WEI;
+  const maxStakeRaw = maxQuote.data?.amount;
   const estimatedNetworkFee = formatNumber(formatEther(stakeNetworkFeeRaw), 6);
   const totalRequiredRaw = amountRaw + stakeNetworkFeeRaw;
   const totalRequired = formatNumber(formatEther(totalRequiredRaw), 6);
   const walletBalance = formatNumber(formatEther(walletBalanceRaw), 6);
   const isInsufficientBalance =
-    isConnected && amountRaw > 0n && amountRaw > maxStakeRaw;
+    isConnected && amountRaw > 0n && totalRequiredRaw > walletBalanceRaw;
   const isInvalidAmount = numAmount < minStake;
 
   useEffect(() => {
@@ -110,23 +112,6 @@ export const StakeModal: React.FC<StakeModalProps> = ({
       setIsSuccess(false);
     }
   }, [isOpen, setIsSuccess]);
-
-  useEffect(() => {
-    if (!isOpen) return;
-
-    let isMounted = true;
-    getEstimatedStakeNetworkFee()
-      .then((fee) => {
-        if (isMounted) setStakeNetworkFeeRaw(fee);
-      })
-      .catch(() => {
-        if (isMounted) setStakeNetworkFeeRaw(DEFAULT_STAKE_NETWORK_FEE_WEI);
-      });
-
-    return () => {
-      isMounted = false;
-    };
-  }, [isOpen]);
 
   const handleClose = () => {
     setIsSuccess(false);
@@ -175,17 +160,15 @@ export const StakeModal: React.FC<StakeModalProps> = ({
     [],
   );
 
-  const formatAmountForInput = useCallback((value: number) => {
-    const rounded = Math.floor(value * 1000) / 1000;
-    return rounded.toFixed(3).replace(/\.0+$/, "").replace(/\.$/, "");
-  }, []);
-
-  const handleMaxClick = useCallback(() => {
-    if (maxStakeAmount > 0) {
-      const maxAmount = Math.max(0, maxStakeAmount);
-      setAmount(formatAmountForInput(maxAmount));
+  const handleMaxClick = () => {
+    if (maxQuote.isError) {
+      void maxQuote.refetch();
+      return;
     }
-  }, [maxStakeAmount, formatAmountForInput]);
+    if (maxStakeRaw !== undefined && maxStakeRaw >= minStakeRaw) {
+      setAmount(formatEther(maxStakeRaw));
+    }
+  };
 
   const handleStake = useCallback(async () => {
     if (!canStake || !targetPool) return;
@@ -278,7 +261,8 @@ export const StakeModal: React.FC<StakeModalProps> = ({
                 <div className="flex items-center justify-between mb-2">
                   <label htmlFor={amountInputId} className="data-label">Enter BDAG Amount</label>
                   <span className="text-xs text-muted-foreground">
-                    Stakeable: {formatNumber(maxStakeAmount, 3)} BDAG
+                    {maxQuote.isFetching ? "Estimating network fee…" :
+                      maxStakeRaw !== undefined ? `Stakeable: ${formatEther(maxStakeRaw)} BDAG` : "Stakeable: —"}
                   </span>
                 </div>
                 <StakeBoundaryStatus reason={stakeBlockReason} isPending={isContractStaking} />
@@ -292,12 +276,18 @@ export const StakeModal: React.FC<StakeModalProps> = ({
                     className="bg-input border-border/50 pr-16 text-lg h-12"
                   />
                   <button
+                    type="button"
                     onClick={handleMaxClick}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-medium text-primary hover:text-primary/80 transition-colors"
+                    disabled={Boolean(stakeBlockReason) || maxQuote.isFetching ||
+                      (!maxQuote.isError && (maxStakeRaw === undefined || maxStakeRaw < minStakeRaw))}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-medium text-primary hover:text-primary/80 transition-colors disabled:opacity-50"
                   >
-                    MAX
+                    {maxQuote.isError ? "Retry fee" : "MAX"}
                   </button>
                 </div>
+                {maxStakeRaw !== undefined && !maxQuote.isError && (
+                  <p className="mt-2 text-xs text-muted-foreground">Max leaves BDAG in your wallet for the network fee.</p>
+                )}
               </div>
 
               {/* Reward Formula Card */}
@@ -446,7 +436,7 @@ export const StakeModal: React.FC<StakeModalProps> = ({
                         <span className="text-right">{totalRequired} BDAG</span>
                       </div>
                       <div className="mt-3 flex flex-wrap items-center gap-2">
-                        {maxStakeAmount >= minStake && (
+                        {maxStakeRaw !== undefined && maxStakeRaw >= minStakeRaw && !maxQuote.isFetching && !maxQuote.isError && (
                           <Button
                             type="button"
                             size="sm"

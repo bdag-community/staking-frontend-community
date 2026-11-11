@@ -7,7 +7,9 @@ import "./index.css";
 import { wagmiAdapter, queryClient } from "@/config/reown";
 
 import ErrorBoundary from "@/components/layout/ErrorBoundary";
+import { restoreStakingReturnRoute } from "@/lib/staking-return-route";
 
+restoreStakingReturnRoute();
 createRoot(document.getElementById("root")!).render(
   <WagmiProvider config={wagmiAdapter.wagmiConfig}>
     <QueryClientProvider client={queryClient}>
