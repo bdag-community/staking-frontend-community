@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { act, cleanup, render } from "@testing-library/react";
@@ -14,8 +15,8 @@ describe("staking home atmosphere", () => {
   });
   it("reuses Community's unmodified cloud shape rather than baked-in staking artwork", async () => {
     expect(existsSync(resolve(process.cwd(), "public/hero-storm-b.webp"))).toBe(true);
-    expect(readFileSync(resolve(process.cwd(), "public/hero-storm-b.webp"))).toEqual(
-      readFileSync(resolve(process.cwd(), "../../bdag-community/public/hero-storm-b.webp")),
+    expect(createHash("sha256").update(readFileSync(resolve(process.cwd(), "public/hero-storm-b.webp"))).digest("hex")).toBe(
+      "04c0f913c14dd9e1cae6155c73cc42dfe55081671f2ef6757a4cc8213a1aba51",
     );
     const { StakingHeroBackdrop } = await import("@/components/home/StakingHeroBackdrop");
     const { container } = render(<StakingHeroBackdrop />);
