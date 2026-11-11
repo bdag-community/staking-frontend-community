@@ -6,6 +6,11 @@ on:
   push:
     branches: [develop, main]
   workflow_dispatch:
+    inputs:
+      verify_xneelo:
+        description: Verify package on Xneelo without deploying
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -58,6 +63,8 @@ jobs:
                  or not isinstance(v, str) or any(c in v for c in ('\r', '\n', '\0'))
                  for k, v in config.items()):
               raise SystemExit('Unexpected build configuration field')
+          if config.get('NEXT_PUBLIC_METAMASK_CHAIN_ID') != '1043' or config.get('NEXT_PUBLIC_EXPECTED_GENESIS_HASH') != '0x58d97c1c16a3ff988105c2bd101b2f473103cc2ef7106ade3296647de65a1663':
+              raise SystemExit('Build requires the approved chain 1043 genesis')
           with open(os.environ['GITHUB_ENV'], 'a') as env:
               for key, value in config.items():
                   print(f'{key}={value}', file=env)
@@ -67,7 +74,7 @@ jobs:
       - name: Archive the frontend and record its digest
         run: |
           mkdir -p release
-          tar -czf release/frontend.tar.gz dist
+          tar --dereference --hard-dereference --exclude='.env' --exclude='.env.*' -czf release/frontend.tar.gz dist
           printf '%s\n' "$GITHUB_SHA" > release/commit.txt
           (cd release && sha256sum frontend.tar.gz > SHA256SUMS)
       - uses: actions/upload-artifact@v4
@@ -76,3 +83,40 @@ jobs:
           path: release/
           if-no-files-found: error
           retention-days: 7
+
+  publish:
+    needs: build
+    if: ${{ github.repository == 'bdag-community/staking-frontend-community' && github.ref == 'refs/heads/develop' && ((github.event_name == 'push' && vars.XNEELO_DEPLOY_ENABLED == 'true') || (github.event_name == 'workflow_dispatch' && inputs.verify_xneelo)) }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    concurrency:
+      group: xneelo-staking
+      cancel-in-progress: false
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: frontend-${{ github.ref_name }}-${{ github.sha }}
+          path: release
+      - name: Verify and send package over the dedicated deployment connection
+        env:
+          DEPLOY_KEY: ${{ secrets.XNEELO_PROMOTION_KEY }}
+          DEPLOY_KNOWN_HOSTS: ${{ vars.XNEELO_KNOWN_HOSTS }}
+          MODE: ${{ github.event_name == 'push' && 'promote' || 'stage' }}
+        run: |
+          set -euo pipefail
+          test -n "$DEPLOY_KEY" && test -n "$DEPLOY_KNOWN_HOSTS"
+          umask 077
+          key_dir=$(mktemp -d)
+          trap 'rm -rf "$key_dir"' EXIT
+          printf '%s\n' "$DEPLOY_KEY" > "$key_dir/key"
+          printf '%s\n' "$DEPLOY_KNOWN_HOSTS" > "$key_dir/known_hosts"
+          cd release
+          test "$(cat commit.txt)" = "$GITHUB_SHA"
+          sha256sum --strict --check SHA256SUMS
+          hash=$(sha256sum frontend.tar.gz | cut -d' ' -f1)
+          ssh -T -i "$key_dir/key" -o BatchMode=yes -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes \
+            -o "UserKnownHostsFile=$key_dir/known_hosts" -o ConnectTimeout=15 ubuntu@154.65.106.86 \
+            "$MODE $GITHUB_SHA $hash" < frontend.tar.gz
+          if [[ "$MODE" == "promote" ]]; then
+            curl --silent --show-error --fail --retry 3 --max-time 20 'https://testnet-staking.bdag.co/' > /dev/null
+          fi
