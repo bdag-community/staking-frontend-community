@@ -3,7 +3,7 @@ import useSWR from "swr";
 import { readContract } from "@wagmi/core";
 import { abi } from "@/contract/abi";
 import { ENV } from "@/config/env";
-import { resolveStakingContractAddress, type StakingContractVersion } from '@/lib/staking-contract';
+import { resolveStakingContractAddress, stakingTimingSelectors, type StakingContractVersion } from '@/lib/staking-contract';
 import { wagmiAdapter } from "@/config/reown";
 import { readContractWithRetry } from "@/utils/contract-calls";
 import { STAKING_PERIOD_FALLBACKS_SECONDS } from "@/utils/constants";
@@ -26,6 +26,7 @@ const fallbackPeriods: StakingPeriods = {
 
 export const useStakingPeriods = ({version='current'}: {version?: StakingContractVersion} = {}) => {
   const contract = resolveStakingContractAddress(version);
+  const selectors = stakingTimingSelectors({chainId:Number(ENV.CHAIN.ID), version, legacyOnly:ENV.LEGACY_ONLY});
   const { data, error, isLoading, isValidating, mutate } = useSWR(
     [
       "stakingPeriods",
@@ -42,7 +43,7 @@ export const useStakingPeriods = ({version='current'}: {version?: StakingContrac
             {
               address: contract,
               abi,
-              functionName: ENV.LEGACY_ONLY ? "INITIAL_BONDING_PERIOD" : "bondingPeriod",
+              functionName: selectors.bonding,
             } as unknown as Parameters<typeof readContract>[1],
             "Initial bonding period",
           ),
@@ -51,7 +52,7 @@ export const useStakingPeriods = ({version='current'}: {version?: StakingContrac
             {
               address: contract,
               abi,
-              functionName: ENV.LEGACY_ONLY ? "UNBONDING_PERIOD" : "unbondingPeriod",
+              functionName: selectors.unbonding,
             } as unknown as Parameters<typeof readContract>[1],
             "Unbonding period",
           ),
@@ -60,7 +61,7 @@ export const useStakingPeriods = ({version='current'}: {version?: StakingContrac
             {
               address: contract,
               abi,
-              functionName: ENV.LEGACY_ONLY ? "EPOCH_DURATION" : "epochDuration",
+              functionName: selectors.epoch,
             } as unknown as Parameters<typeof readContract>[1],
             "Epoch duration",
           ),

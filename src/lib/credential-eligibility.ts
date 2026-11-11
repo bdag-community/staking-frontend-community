@@ -2,7 +2,7 @@ import type { Address } from 'viem';
 import { formatUnits } from 'viem';
 
 export function formatCredentialWeight(value:bigint,domain:'mining'|'staking',chainId:number) {
-  return formatUnits(value,domain==='staking' && chainId===1043 ? 24 : 18);
+  return formatUnits(value,domain==='staking' && [1043,1404].includes(chainId) ? 24 : 18);
 }
 
 export function mergeCredentialPools(registered: readonly Address[], discovered: readonly Address[]): Address[] {

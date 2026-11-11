@@ -6,11 +6,12 @@ import { ENV } from "@/config/env";
 import { wagmiAdapter } from "@/config/reown";
 import { readContractWithRetry } from "@/utils/contract-calls";
 import { useWallet } from "./use-wallet";
-import { resolveStakingContractAddress, type StakingContractVersion } from '@/lib/staking-contract';
+import { resolveStakingContractAddress, stakingTimingSelectors, type StakingContractVersion } from '@/lib/staking-contract';
 
 export const useInitialBondingPeriod = ({version='current'}: {version?: StakingContractVersion} = {}) => {
   const { address, isConnected } = useWallet();
   const contract = resolveStakingContractAddress(version);
+  const selectors = stakingTimingSelectors({chainId:Number(ENV.CHAIN.ID), version, legacyOnly:ENV.LEGACY_ONLY});
 
   const { data, error, isLoading, isValidating, mutate } = useSWR(
     isConnected && address ? ["initialBondingPeriod", ENV.CHAIN.RPC_URL, contract, address] : null,
@@ -31,11 +32,11 @@ export const useInitialBondingPeriod = ({version='current'}: {version?: StakingC
           {
             address: contract,
             abi,
-            functionName: "INITIAL_BONDING_PERIOD",
+            functionName: selectors.bonding,
           } as unknown as Parameters<typeof readContract>[1],
           "Initial bonding period",
         ),
-        ENV.LEGACY_ONLY ? Promise.resolve(undefined) : readContractWithRetry<bigint>(wagmiAdapter.wagmiConfig, {
+        !selectors.frozenBondingEnd ? Promise.resolve(undefined) : readContractWithRetry<bigint>(wagmiAdapter.wagmiConfig, {
           address: contract, abi, functionName:'bondingEndsAt', args:[address as `0x${string}`],
         } as unknown as Parameters<typeof readContract>[1], 'Frozen bonding deadline'),
       ]);

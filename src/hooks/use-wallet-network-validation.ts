@@ -4,6 +4,8 @@ import { getConnectorClient } from "@wagmi/core";
 import { ENV } from "@/config/env";
 import { wagmiAdapter } from "@/config/reown";
 import { isRetryableContractError } from "@/utils/contract-calls";
+import {sha256,toBytes,keccak256} from 'viem';
+import {parseMainnetProfile,verifyMainnetReadContext,verifyMainnetCanonicalHistory} from '@/lib/mainnet-profile';
 
 type GenesisBlock = { hash?: string | null } | null;
 
@@ -17,6 +19,10 @@ const accountAddress = (account: unknown) => {
 export const readFreshWalletNetwork = async () => {
   const client = await getConnectorClient(wagmiAdapter.wagmiConfig);
   const connector = client as unknown as { request: (args: { method: string; params?: readonly unknown[] }) => Promise<unknown> };
+  if(Number(ENV.CHAIN.ID)===1404){
+    const p=parseMainnetProfile(ENV.CHAIN.MAINNET_PROFILE_JSON,ENV.CHAIN.MAINNET_PROFILE_SHA256,raw=>sha256(toBytes(raw)));
+    await verifyMainnetReadContext(p,(method,params)=>connector.request({method,params}),code=>keccak256(code as `0x${string}`));
+  }
   const [chainIdResult, block] = await Promise.all([
     connector.request({ method: "eth_chainId", params: [] }),
     connector.request({ method: "eth_getBlockByNumber", params: ["0x0", false] }) as Promise<GenesisBlock>,
@@ -36,7 +42,7 @@ export const useWalletNetworkValidation = () => {
   const { data: client, isLoading: isClientLoading } = useConnectorClient();
   const expectedGenesisHash = ENV.CHAIN.EXPECTED_GENESIS_HASH.toLowerCase();
   const key = isConnected && client && address
-    ? ["wallet-genesis", chainId, address, expectedGenesisHash]
+    ? ["wallet-genesis", chainId, address, expectedGenesisHash, ...(Number(ENV.CHAIN.ID)===1404?[ENV.CHAIN.MAINNET_PROFILE_SHA256]:[])]
     : null;
 
   const { data: genesisHash, error, isLoading, mutate } = useSWR<string | null>(
@@ -44,6 +50,10 @@ export const useWalletNetworkValidation = () => {
     async () => {
       if (!client) return null;
       const connector = client as unknown as { request: (args: { method: string; params: readonly unknown[] }) => Promise<unknown> };
+      if(Number(ENV.CHAIN.ID)===1404){
+        const p=parseMainnetProfile(ENV.CHAIN.MAINNET_PROFILE_JSON,ENV.CHAIN.MAINNET_PROFILE_SHA256,raw=>sha256(toBytes(raw)));
+        await verifyMainnetCanonicalHistory(p,(method,params)=>connector.request({method,params}));
+      }
       const block = await connector.request({
         method: "eth_getBlockByNumber",
         params: ["0x0", false],

@@ -14,6 +14,8 @@ export const ENV = {
     RPC_URL: import.meta.env.NEXT_PUBLIC_RPC_URL,
     ID: import.meta.env.NEXT_PUBLIC_METAMASK_CHAIN_ID,
     EXPECTED_GENESIS_HASH: (import.meta.env.NEXT_PUBLIC_EXPECTED_GENESIS_HASH || "") as `0x${string}`,
+    MAINNET_PROFILE_JSON:import.meta.env.NEXT_PUBLIC_MAINNET_PROFILE_JSON as string|undefined,
+    MAINNET_PROFILE_SHA256:import.meta.env.NEXT_PUBLIC_MAINNET_PROFILE_SHA256 as string|undefined,
     CURRENCY_NAME: import.meta.env.NEXT_PUBLIC_CURRNCY_NAME,
     CURRENCY_SYMBOL: import.meta.env.NEXT_PUBLIC_CURRNCY_SYMBOL,
     BLOCK_EXPLORER_URL: import.meta.env.NEXT_PUBLIC_BLOCK_EXPLORE_URL,

@@ -1,0 +1,131 @@
+{
+  "schema": "bdag.mainnet.platform-profile.v1",
+  "status": "sealed",
+  "installationAuthorized": true,
+  "chainId": 1404,
+  "genesisHash": "0x3fb19ea409ac7399ad7b988b88e0d436722c967137e51e834ccefd7611a592ef",
+  "genesisStateRoot": "0x564aeb23c21b395f94839991240f0665fdf6b083cad3a41ac6412fa2180ac76a",
+  "baseline": {
+    "number": 26827713,
+    "hash": "0x43ee06b99e53f7245b134ff125edb91e636674fd421bc5796e3eac0f3dc3eb23",
+    "stateRoot": "0x0d6c4569cdabb457e6f9fccbde785e9b2ac3fb39dae84179b534f12c481c97f7"
+  },
+  "nativeMigrationBundleSha256": "d64f893f7d1eae52b369d59d434f7c5f6745794fb0610a7d71456022d38aa33f",
+  "epochSeconds": 604800,
+  "stakingProxy": "0x1000000000000000000000000000000000000020",
+  "legacyStakingProxy": "0x08Bd519F611556dC148e7BfFE8d6f078F23a8EF7",
+  "contracts": {
+    "governor": "0x12724c45B466f3C3034A4B4BBaC5C5a7e63Ea5c8",
+    "miningCredential": "0x7000446CaB27ba0cfb467b48d341Cb8afc8288Ec",
+    "stakingCredential": "0x54cb80E619f97b1fDF352D057B0cA53CD1c7D695",
+    "policyModule": "0xFcBb63f8008905A1E4974068769181595b89BC88",
+    "chainTallyReader": "0x1000000000000000000000000000000000000002",
+    "blocklist": "0xe628505d5cB6F5F4f9a25Cd5c80Caa198cc645a0",
+    "selectiveBlocklist": "0xc0a42A43A05e39C3a4165CA98440D516959f41D9",
+    "approvedDevRegistry": "0xf2F485c11cC32388AC88D51E13E7128b27a964bE",
+    "bidBondVault": "0xe8e1662F978AF774ae5459FDDa9D1a3bD082efAb",
+    "escrowFactory": "0x3B40194B6CFBdFA8A9812b52eF5BDB9eD1FAAc23",
+    "communityTreasury": "0x7d583030CABDa51da722D581206e51e3d2865565"
+  },
+  "runtimePins": {
+    "reader": {
+      "address": "0x1000000000000000000000000000000000000002",
+      "codeHash": "0x32dade1466821a061bf09f482f97921a307f5ca421467512c04bbbb5989c1db3"
+    },
+    "legacyImplementation": {
+      "address": "0xbC1E1E0Fe713507B8cDb7188f9a8049c5a540e3f",
+      "codeHash": "0xc06556e7095a029ba6950893e99dffbe59754b3662d57b3e796f0cb17f2aae66"
+    },
+    "stakingV2Implementation": {
+      "address": "0x050A5bd99c48ABFEDD50CAD7B53CF8929b369c87",
+      "codeHash": "0xa3cc85af6a6089589dd1a8b8ca20fa3e71b50767232b631e78e16359f607d67c"
+    },
+    "stakingV2": {
+      "address": "0x1000000000000000000000000000000000000020",
+      "codeHash": "0xd0ae9f485b4e3227da90b0ddf626c4ca7ec826b5e5cc3be71ed4618ee7da2ed7"
+    },
+    "miningCredential": {
+      "address": "0x7000446CaB27ba0cfb467b48d341Cb8afc8288Ec",
+      "codeHash": "0x1b9be1a90ddd61b835bd2dcd5d4322817fb56963208fcfad3d43036837b3d430"
+    },
+    "stakingCredential": {
+      "address": "0x54cb80E619f97b1fDF352D057B0cA53CD1c7D695",
+      "codeHash": "0x654946debb2bae2d99bc53bc46aae2be92b563ff86e10285d5a4f5e216d90fd8"
+    },
+    "governor": {
+      "address": "0x12724c45B466f3C3034A4B4BBaC5C5a7e63Ea5c8",
+      "codeHash": "0xbca4a87e33783f22423c459d05724d7350f045ff23b8ca98cb7205f577b2d5b5"
+    },
+    "miningTimelock": {
+      "address": "0x836E3D0Eca9401574A6e9bd1a4052dC3D98a7d31",
+      "codeHash": "0x2efe51114e65d7b8d6b0f97e9d59d6d37dc0c57e0280e18a87f9d00f433ecffa"
+    },
+    "stakingTimelock": {
+      "address": "0x3FBA9602Ad248397CA8Bb5280227b22CEa2ecCc9",
+      "codeHash": "0x2efe51114e65d7b8d6b0f97e9d59d6d37dc0c57e0280e18a87f9d00f433ecffa"
+    },
+    "timing": {
+      "address": "0xcAd5D03BeB22567e212a9ca7cc685C8aCF3c8711",
+      "codeHash": "0x69e11ecacae230af4330fe9fefc1544ec4da4e0ea5a0b5e7c975af3aee5417dc"
+    },
+    "policy": {
+      "address": "0xFcBb63f8008905A1E4974068769181595b89BC88",
+      "codeHash": "0x88b3e1723ba010f5d24115fddf3fb8daac0592618adae9f48512654bdd0e736a"
+    },
+    "hub": {
+      "address": "0x7bb43849b8d01a936996C4d6dfE25E1E59fd885C",
+      "codeHash": "0xfbcbb14c004d85d70025d07d9e7888e4d6be2efafdb9f9d7905e784c19c73096"
+    },
+    "developers": {
+      "address": "0xf2F485c11cC32388AC88D51E13E7128b27a964bE",
+      "codeHash": "0xc4535e38d91c75b234439ce10e6ddde8ff07f96806a6b5f497259ef04e5306c8"
+    },
+    "bondVault": {
+      "address": "0xe8e1662F978AF774ae5459FDDa9D1a3bD082efAb",
+      "codeHash": "0x04777f1556eaacc35c36ec2a2097d0d12897e650a946fef2a3ac717b820e37dc"
+    },
+    "treasury": {
+      "address": "0x7d583030CABDa51da722D581206e51e3d2865565",
+      "codeHash": "0x6f30009b3a315af39b0ebe8f2d8f01f7e753f7a8690e218f82fdb734ea2e87ca"
+    },
+    "factory": {
+      "address": "0x3B40194B6CFBdFA8A9812b52eF5BDB9eD1FAAc23",
+      "codeHash": "0xc11f06c5e97e8f7f32baa501366ec9a0446dd63b1cab391f24617aac55e5f0f8"
+    },
+    "escrow": {
+      "address": "0x88929A1b733222Bd2ab5214Ee7276D9a0a9fcc03",
+      "codeHash": "0x9a7d42cfd60b6bd32a1794cf3f2c911080dc03c8d7e1529a832b7069dbeecb9b"
+    },
+    "miningRegistry": {
+      "address": "0x493C72A1F995D0FB07dA1597E9D9Baa9bce5f568",
+      "codeHash": "0xe736966b4bb7c37858523b7c59887ceb1578d73fdfcf5d539e343d97c59b103d"
+    },
+    "legacyEscrow": {
+      "address": "0x585d80E2DAda3e24D7ba301B53b189c5aF993b7A",
+      "codeHash": "0xb95b99c6fdbf50c42b510e8aa4bd820f32c2faf41a8d8838f92f1a80e58be710"
+    },
+    "legacyProxy": {
+      "address": "0x08Bd519F611556dC148e7BfFE8d6f078F23a8EF7",
+      "codeHash": "0xac262b85e63b365cf069c53e37d41aaa2ca7c1ff7e528b62b9000d2b94391bf7"
+    }
+  },
+  "epochClock": {
+    "interfaceVersion": "3",
+    "reader": "0x1000000000000000000000000000000000000002",
+    "codeHash": "0x32dade1466821a061bf09f482f97921a307f5ca421467512c04bbbb5989c1db3",
+    "stakingSource": "0x08bd519f611556dc148e7bffe8d6f078f23a8ef7",
+    "activeStakingSource": "0x1000000000000000000000000000000000000020"
+  },
+  "reviewers": [
+    "0x1F4040F2bFDCdeD94f2d8f27Fcd930b6C67Ee5F1",
+    "0xA5968191D122aF96fD7C43008a121A653536B86e",
+    "0x754cBD6A7f2B3485a00066422166eC63112bC6a1"
+  ],
+  "authorityInputSha256": "31f7ade8f9450847634067e6685a0471fbcc8347c49a408f829b2aa0b486c457",
+  "fundingEnabled": false,
+  "pending": [
+    "Final authority/profile sealing and canonical native/EVM replay qualification",
+    "Approved production API, database and website configuration",
+    "Supported-wallet acceptance against final deployed runtimes after separately approved activation"
+  ]
+}

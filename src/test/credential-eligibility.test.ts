@@ -4,6 +4,7 @@ import { claimableVotes, credentialErrorMessage, mergeCredentialPools, formatCre
 describe('voting claim eligibility', () => {
   it('normalizes precision in the pinned testnet staking ledger for display only',()=>{
     expect(formatCredentialWeight(330000000000000000000000000n,'staking',1043)).toBe('330');
+    expect(formatCredentialWeight(330000000000000000000000000n,'staking',1404)).toBe('330');
     expect(formatCredentialWeight(1000000000000000000n,'mining',1043)).toBe('1');
   });
   it('includes a newly staked pool even when no pools are registered', () => {
