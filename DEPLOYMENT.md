@@ -5,3 +5,5 @@
 Pushes and pull requests run type and application checks. A successful push to `develop` builds a checksummed package. With the repository and host deployment gates enabled, that package is promoted to https://testnet-staking.bdag.co/ using the existing Xneelo runtime. The dedicated key cannot open a shell or deploy another app. A manual run with `verify_xneelo` stages and validates the package without changing the active site. Host configuration and credentials stay on Xneelo.
 
 Source for this branch at import: `develop`, revision `4770d83ef927164557f34daf1228db448161c5bf`. The previous repository and history were preserved separately.
+
+Keep Legacy rehearsal files and previous hashed assets when deploying.
