@@ -7,3 +7,5 @@ Pushes and pull requests run type and application checks. A successful push to `
 Source for this branch at import: `develop`, revision `4770d83ef927164557f34daf1228db448161c5bf`. The previous repository and history were preserved separately.
 
 Keep Legacy rehearsal files and previous hashed assets when deploying.
+
+If GitHub does not deliver a push run, dispatch the workflow on the publishing branch with **Publish this build to the approved site**. That uses the same validation and host gates.
