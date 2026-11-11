@@ -1,0 +1,21 @@
+name: bdag-staking-local
+services:
+  staking:
+    image: ${STAKING_IMAGE:-bdag-staking:local}
+    build:
+      context: .
+      secrets:
+        - frontend_env
+    ports:
+      - "127.0.0.1:${STAKING_PORT:-8081}:8080"
+    restart: unless-stopped
+    read_only: true
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=32m
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+secrets:
+  frontend_env:
+    file: ${STAKING_PUBLIC_ENV_FILE:-.env.local}

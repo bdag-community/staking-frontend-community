@@ -1,0 +1,283 @@
+import {
+  Pool,
+  UserStake,
+  RewardHistoryEntry,
+  EpochInfo,
+  WalletState,
+  NetworkStats,
+} from "@/utils/interface";
+import { STAKING_CONSTANTS } from "@/utils/constants";
+import { calculateCurrentWeeklyPool, calculateDynamicAPY } from "@/lib/utils";
+
+// ============= MOCK DATA =============
+
+const epochStartDate = new Date();
+epochStartDate.setDate(epochStartDate.getDate() - 3); // 3 days into current epoch
+
+export const mockEpochInfo: EpochInfo = {
+  currentEpoch: 47,
+  epochStartDate,
+  nextEpochDate: new Date(epochStartDate.getTime() + 7 * 24 * 60 * 60 * 1000),
+  weeklyDecayRate: STAKING_CONSTANTS.WEEKLY_DECAY_RATE,
+  rewardSplit: {
+    miner: STAKING_CONSTANTS.MINER_SHARE,
+    staker: STAKING_CONSTANTS.STAKER_SHARE,
+  },
+  baseWeeklyRewardPool: STAKING_CONSTANTS.BASE_WEEKLY_EMISSION,
+  currentWeeklyRewardPool: calculateCurrentWeeklyPool(
+    STAKING_CONSTANTS.BASE_WEEKLY_EMISSION,
+    47,
+  ),
+};
+
+// Calculate current weekly pool after 47 epochs of decay
+const currentWeeklyPool = calculateCurrentWeeklyPool(
+  STAKING_CONSTANTS.BASE_WEEKLY_EMISSION,
+  47,
+);
+
+export const networkStats: NetworkStats = {
+  totalNetworkStaked: 124850000,
+  totalStakedUSD: 3120000,
+  currentAPY: calculateDynamicAPY(currentWeeklyPool, 124850000),
+  targetAPYMin: STAKING_CONSTANTS.TARGET_APY_MIN,
+  targetAPYMax: STAKING_CONSTANTS.TARGET_APY_MAX,
+  totalStakers: 28543,
+  marketCap: 66321458,
+  totalRewardsDistributed: 2120934,
+  bdagPrice: 0.0248,
+  currentWeeklyRewardPool: currentWeeklyPool,
+  weeklyDecayMultiplier: Math.pow(1 - STAKING_CONSTANTS.WEEKLY_DECAY_RATE, 47),
+};
+
+export const mockPools: Pool[] = [
+  {
+    id: "pool-1",
+    name: "Titan Mining Pool",
+    address: "0x4F1536FC181C541f3eF766D227373f55d03CE0bA",
+    commission: 2.5,
+    hashPower: "45.2 PH/s",
+    hashPowerNum: 45.2,
+    connectedMiners: 1247,
+    blocksMinedCurrent: 342,
+    blocksMinedLast: 328,
+    rewardsGeneratedCurrent: 125430,
+    rewardsGeneratedLast: 120156,
+    totalStaked: 15420000,
+    isFeatured: true,
+    uptime: 99.97,
+    status: "active",
+  },
+  {
+    id: "pool-2",
+    name: "Neptune Validators",
+    address: "0x0cAAF9f9e41d3Ef18b308a5DaFe907A189412Da4",
+    commission: 3.0,
+    hashPower: "38.7 PH/s",
+    hashPowerNum: 38.7,
+    connectedMiners: 982,
+    blocksMinedCurrent: 289,
+    blocksMinedLast: 301,
+    rewardsGeneratedCurrent: 98750,
+    rewardsGeneratedLast: 102340,
+    totalStaked: 12850000,
+    isFeatured: true,
+    uptime: 99.89,
+    status: "active",
+  },
+  {
+    id: "pool-3",
+    name: "BlockDAG Genesis",
+    address: "0x3456...7890",
+    commission: 1.5,
+    hashPower: "52.1 PH/s",
+    hashPowerNum: 52.1,
+    connectedMiners: 1589,
+    blocksMinedCurrent: 398,
+    blocksMinedLast: 385,
+    rewardsGeneratedCurrent: 148920,
+    rewardsGeneratedLast: 142350,
+    totalStaked: 21340000,
+    isFeatured: true,
+    uptime: 99.99,
+    status: "active",
+  },
+  {
+    id: "pool-4",
+    name: "Quantum Stake",
+    address: "0x4567...8901",
+    commission: 4.0,
+    hashPower: "28.4 PH/s",
+    hashPowerNum: 28.4,
+    connectedMiners: 654,
+    blocksMinedCurrent: 198,
+    blocksMinedLast: 205,
+    rewardsGeneratedCurrent: 68420,
+    rewardsGeneratedLast: 71230,
+    totalStaked: 8920000,
+    isFeatured: false,
+    uptime: 99.75,
+    status: "active",
+  },
+  {
+    id: "pool-5",
+    name: "Solar Hash",
+    address: "0x5678...9012",
+    commission: 2.0,
+    hashPower: "41.8 PH/s",
+    hashPowerNum: 41.8,
+    connectedMiners: 1123,
+    blocksMinedCurrent: 312,
+    blocksMinedLast: 298,
+    rewardsGeneratedCurrent: 112450,
+    rewardsGeneratedLast: 105680,
+    totalStaked: 14250000,
+    isFeatured: false,
+    uptime: 99.92,
+    status: "active",
+  },
+  {
+    id: "pool-6",
+    name: "Arctic Validators",
+    address: "0x6789...0123",
+    commission: 5.0,
+    hashPower: "19.2 PH/s",
+    hashPowerNum: 19.2,
+    connectedMiners: 423,
+    blocksMinedCurrent: 142,
+    blocksMinedLast: 156,
+    rewardsGeneratedCurrent: 48920,
+    rewardsGeneratedLast: 52340,
+    totalStaked: 5680000,
+    isFeatured: false,
+    uptime: 99.45,
+    status: "active",
+  },
+  {
+    id: "pool-7",
+    name: "Phoenix Mining",
+    address: "0x7890...1234",
+    commission: 3.5,
+    hashPower: "33.6 PH/s",
+    hashPowerNum: 33.6,
+    connectedMiners: 789,
+    blocksMinedCurrent: 256,
+    blocksMinedLast: 248,
+    rewardsGeneratedCurrent: 89750,
+    rewardsGeneratedLast: 86420,
+    totalStaked: 10450000,
+    isFeatured: false,
+    uptime: 99.82,
+    status: "active",
+  },
+  {
+    id: "pool-8",
+    name: "Thunder Pool",
+    address: "0x8901...2345",
+    commission: 2.8,
+    hashPower: "36.9 PH/s",
+    hashPowerNum: 36.9,
+    connectedMiners: 856,
+    blocksMinedCurrent: 278,
+    blocksMinedLast: 265,
+    rewardsGeneratedCurrent: 95620,
+    rewardsGeneratedLast: 91340,
+    totalStaked: 11780000,
+    isFeatured: false,
+    uptime: 99.88,
+    status: "active",
+  },
+  {
+    id: "pool-9",
+    name: "Nova Stakers",
+    address: "0x9012...3456",
+    commission: 1.8,
+    hashPower: "44.5 PH/s",
+    hashPowerNum: 44.5,
+    connectedMiners: 1198,
+    blocksMinedCurrent: 334,
+    blocksMinedLast: 321,
+    rewardsGeneratedCurrent: 118920,
+    rewardsGeneratedLast: 114560,
+    totalStaked: 16890000,
+    isFeatured: false,
+    uptime: 99.95,
+    status: "active",
+  },
+  {
+    id: "pool-10",
+    name: "Cosmic Hash",
+    address: "0x0123...4567",
+    commission: 4.5,
+    hashPower: "22.7 PH/s",
+    hashPowerNum: 22.7,
+    connectedMiners: 512,
+    blocksMinedCurrent: 168,
+    blocksMinedLast: 175,
+    rewardsGeneratedCurrent: 58340,
+    rewardsGeneratedLast: 61250,
+    totalStaked: 6920000,
+    isFeatured: false,
+    uptime: 99.68,
+    status: "active",
+  },
+];
+
+// Generate mock reward history
+const generateRewardHistory = (epochs: number): RewardHistoryEntry[] => {
+  const history: RewardHistoryEntry[] = [];
+  for (let i = epochs; i > Math.max(0, epochs - 8); i--) {
+    const date = new Date();
+    date.setDate(date.getDate() - (epochs - i) * 7);
+    history.push({
+      epoch: i,
+      amount: 50 + Math.random() * 30,
+      date,
+      apy: 8.5 + Math.random() * 1.5,
+    });
+  }
+  return history;
+};
+
+export const mockWalletState: WalletState = {
+  isConnected: false,
+  address: null,
+  availableBdag: 0,
+  totalStaked: 0,
+  totalPendingRewards: 0,
+  totalRewardsEarned: 0,
+  rewardsThisWeek: 0,
+  stakes: [],
+};
+
+export const mockConnectedWalletState: WalletState = {
+  isConnected: true,
+  address: "0xAbCd...EfGh",
+  availableBdag: 125000,
+  totalStaked: 45000,
+  totalPendingRewards: 892.45,
+  totalRewardsEarned: 4521.3,
+  rewardsThisWeek: 156.82,
+  stakes: [
+    {
+      poolId: "pool-1",
+      poolName: "Titan Mining Pool",
+      stakedAmount: 25000,
+      pendingRewards: 512.3,
+      totalRewardsEarned: 2845.6,
+      stakedAt: new Date(Date.now() - 14 * 24 * 60 * 60 * 1000),
+      isUnbonding: false,
+      rewardHistory: generateRewardHistory(47),
+    },
+    {
+      poolId: "pool-3",
+      poolName: "BlockDAG Genesis",
+      stakedAmount: 20000,
+      pendingRewards: 380.15,
+      totalRewardsEarned: 1675.7,
+      stakedAt: new Date(Date.now() - 21 * 24 * 60 * 60 * 1000),
+      isUnbonding: false,
+      rewardHistory: generateRewardHistory(47),
+    },
+  ],
+};

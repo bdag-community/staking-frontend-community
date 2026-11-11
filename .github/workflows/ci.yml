@@ -1,0 +1,78 @@
+name: Frontend checks and package
+
+on:
+  pull_request:
+    branches: [develop, main]
+  push:
+    branches: [develop, main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: frontend-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  checks:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+      - run: npm ci
+      - run: npx tsc -p tsconfig.app.json --noEmit
+      - run: npm test
+
+  build:
+    needs: checks
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/develop' && vars.FRONTEND_BUILD_ENABLED == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+      - run: npm ci
+      - name: Set the approved browser build configuration
+        env:
+          BUILD_CONFIG: ${{ secrets.FRONTEND_PUBLIC_BUILD_JSON }}
+        run: |
+          python3 - <<'PY'
+          import json, os, re
+          config = json.loads(os.environ['BUILD_CONFIG'])
+          if not isinstance(config, dict) or not config:
+              raise SystemExit('No public build configuration')
+          if any(not re.fullmatch(r'NEXT_PUBLIC_[A-Z0-9_]+|ASSET_STORAGE_ENVIRONMENT|ASSET_DELIVERY_ORIGIN', k)
+                 or re.search(r'SECRET|PRIVATE_KEY|SERVICE_ROLE|PASSWORD|ACCESS_TOKEN', k)
+                 or not isinstance(v, str) or any(c in v for c in ('\r', '\n', '\0'))
+                 for k, v in config.items()):
+              raise SystemExit('Unexpected build configuration field')
+          with open(os.environ['GITHUB_ENV'], 'a') as env:
+              for key, value in config.items():
+                  print(f'{key}={value}', file=env)
+          PY
+      - name: Build frontend
+        run: npm run build
+      - name: Archive the frontend and record its digest
+        run: |
+          mkdir -p release
+          tar -czf release/frontend.tar.gz dist
+          printf '%s\n' "$GITHUB_SHA" > release/commit.txt
+          (cd release && sha256sum frontend.tar.gz > SHA256SUMS)
+      - uses: actions/upload-artifact@v4
+        with:
+          name: frontend-${{ github.ref_name }}-${{ github.sha }}
+          path: release/
+          if-no-files-found: error
+          retention-days: 7
