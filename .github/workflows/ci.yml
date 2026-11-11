@@ -11,6 +11,10 @@ on:
         description: Verify package on Xneelo without deploying
         type: boolean
         default: false
+      publish_live:
+        description: Publish this build to the approved site
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -86,7 +90,7 @@ jobs:
 
   publish:
     needs: build
-    if: ${{ github.repository == 'bdag-community/staking-frontend-community' && github.ref == 'refs/heads/develop' && ((github.event_name == 'push' && vars.XNEELO_DEPLOY_ENABLED == 'true') || (github.event_name == 'workflow_dispatch' && inputs.verify_xneelo)) }}
+    if: ${{ github.repository == 'bdag-community/staking-frontend-community' && github.ref == 'refs/heads/develop' && ((vars.XNEELO_DEPLOY_ENABLED == 'true' && (github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.publish_live && !inputs.verify_xneelo))) || (github.event_name == 'workflow_dispatch' && inputs.verify_xneelo && !inputs.publish_live)) }}
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     concurrency:
@@ -101,7 +105,7 @@ jobs:
         env:
           DEPLOY_KEY: ${{ secrets.XNEELO_PROMOTION_KEY }}
           DEPLOY_KNOWN_HOSTS: ${{ vars.XNEELO_KNOWN_HOSTS }}
-          MODE: ${{ github.event_name == 'push' && 'promote' || 'stage' }}
+          MODE: ${{ (github.event_name == 'push' || inputs.publish_live) && 'promote' || 'stage' }}
         run: |
           set -euo pipefail
           test -n "$DEPLOY_KEY" && test -n "$DEPLOY_KNOWN_HOSTS"
