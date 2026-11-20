@@ -41,7 +41,8 @@ jobs:
 
   build:
     needs: checks
-    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/develop' && vars.FRONTEND_BUILD_ENABLED == 'true'
+    if: github.repository == 'bdag-community/staking-frontend-community' && github.event_name != 'pull_request' && github.ref == 'refs/heads/develop' && github.ref_protected && vars.FRONTEND_BUILD_ENABLED == 'true'
+    environment: staging
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     steps:
@@ -90,7 +91,8 @@ jobs:
 
   publish:
     needs: build
-    if: ${{ github.repository == 'bdag-community/staking-frontend-community' && github.ref == 'refs/heads/develop' && ((vars.XNEELO_DEPLOY_ENABLED == 'true' && (github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.publish_live && !inputs.verify_xneelo))) || (github.event_name == 'workflow_dispatch' && inputs.verify_xneelo && !inputs.publish_live)) }}
+    if: ${{ github.repository == 'bdag-community/staking-frontend-community' && github.ref == 'refs/heads/develop' && github.ref_protected && ((vars.XNEELO_DEPLOY_ENABLED == 'true' && (github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.publish_live && !inputs.verify_xneelo))) || (github.event_name == 'workflow_dispatch' && inputs.verify_xneelo && !inputs.publish_live)) }}
+    environment: staging
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     concurrency:

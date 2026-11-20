@@ -9,3 +9,16 @@ Source for this branch at import: `develop`, revision `4770d83ef927164557f34daf1
 Keep Legacy rehearsal files and previous hashed assets when deploying.
 
 If GitHub does not deliver a push run, dispatch the workflow on the publishing branch with **Publish this build to the approved site**. That uses the same validation and host gates.
+
+## Testnet deployment credentials
+
+The package and publish jobs use this repository's `staging` GitHub environment.
+Set its deployment branch to `develop` only. The jobs require a protected
+`develop` in the original repository and validate the Testnet genesis.
+
+Provision `FRONTEND_PUBLIC_BUILD_JSON` and the dedicated
+`XNEELO_PROMOTION_KEY` as environment secrets. Remove their repository-level
+copies after the environment is configured so other refs cannot use them.
+Keep the existing build, deployment and host-key variables. Use
+`verify_xneelo` from protected `develop` to validate the scoped connection
+before enabling live promotion.
