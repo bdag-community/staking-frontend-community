@@ -1,0 +1,81 @@
+name: Validate production promotion source
+
+on:
+  pull_request_target:
+    branches: [main]
+    types: [opened, reopened, synchronize, edited, ready_for_review]
+
+permissions: {}
+
+concurrency:
+  group: bdag-promotion-source-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  promotion-source:
+    name: Check promotion metadata
+    runs-on: ubuntu-24.04
+    timeout-minutes: 2
+    permissions:
+      contents: read
+      pull-requests: read
+      statuses: write
+    steps:
+      # The trusted workflow only reads GitHub metadata. It never checks out
+      # or runs code from the pull request.
+      - name: Publish status on GitHub's test merge commit
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          pr=$(jq -er '.pull_request.number | select(type == "number")' "$GITHUB_EVENT_PATH")
+          [[ "$pr" =~ ^[1-9][0-9]*$ ]]
+          endpoint="repos/$GITHUB_REPOSITORY/pulls/$pr"
+          status_sha=
+
+          # GitHub computes mergeability asynchronously. A conflicted or
+          # still-calculating PR receives no successful status.
+          for _ in 1 2 3 4 5 6; do
+            details=$(gh api "$endpoint")
+            if ! jq -e '.state == "open" and .base.ref == "main"' >/dev/null <<<"$details"; then
+              exit 0
+            fi
+            merge_sha=$(jq -r '.merge_commit_sha // empty' <<<"$details")
+            if [[ "$merge_sha" =~ ^[0-9a-f]{40}$ ]] && jq -e '.mergeable == true' >/dev/null <<<"$details"; then
+              base_sha=$(jq -er '.base.sha' <<<"$details")
+              head_sha=$(jq -er '.head.sha' <<<"$details")
+              main_sha=$(gh api "repos/$GITHUB_REPOSITORY/git/ref/heads/main" --jq '.object.sha')
+              if [[ "$base_sha" == "$main_sha" ]] \
+                && commit=$(gh api "repos/$GITHUB_REPOSITORY/git/commits/$merge_sha") \
+                && jq -e --arg base "$base_sha" --arg head "$head_sha" \
+                '[.parents[].sha] == [$base, $head]' >/dev/null <<<"$commit"; then
+                status_sha=$merge_sha
+                break
+              fi
+            fi
+            sleep 4
+          done
+
+          if [[ -z "$status_sha" ]]; then
+            echo 'Waiting for a current, conflict-free test merge commit.' >&2
+            exit 1
+          fi
+
+          state=failure
+          description='Promotion must come from the develop branch of this repository.'
+          if jq -e --arg repo "$GITHUB_REPOSITORY" \
+            '.base.repo.full_name == $repo and .head.repo.full_name == $repo and .head.ref == "develop"' \
+            >/dev/null <<<"$details"; then
+            develop_sha=$(gh api "repos/$GITHUB_REPOSITORY/git/ref/heads/develop" --jq '.object.sha')
+            if [[ "$head_sha" == "$develop_sha" ]]; then
+              state=success
+              description='Promotion uses the current develop branch of this repository.'
+            fi
+          fi
+
+          target="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
+          gh api --method POST "repos/$GITHUB_REPOSITORY/statuses/$status_sha" \
+            -f context=bdag/promotion-source -f state="$state" \
+            -f description="$description" -f target_url="$target" >/dev/null
+          [[ "$state" == success ]]
